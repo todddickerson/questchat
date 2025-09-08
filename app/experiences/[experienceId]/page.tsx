@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { requireAccess } from "@/lib/auth";
+// import { requireAccess } from "@/lib/auth";
 import WhopClient from "./whop-client";
 
 export default async function ExperiencePage({
