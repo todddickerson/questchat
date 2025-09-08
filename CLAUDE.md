@@ -142,6 +142,9 @@ WHOP_APP_ID=...
 WHOP_COMPANY_ID=...
 WHOP_PUBLIC_BASE_URL=https://questchat.vercel.app
 
+# Reference: Whop LLM Documentation
+# https://docs.whop.com/llms-full.txt
+
 # Security
 QUESTCHAT_SIGNING_SECRET=... (generate with openssl rand -hex 32)
 
