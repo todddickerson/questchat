@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
-// import { requireAccess } from "@/lib/auth";
+import { headers } from "next/headers";
+import { verifyUserToken } from "@/lib/whop";
 import WhopClient from "./whop-client";
 
 export default async function ExperiencePage({
@@ -8,8 +9,37 @@ export default async function ExperiencePage({
   params: { experienceId: string };
 }) {
   try {
-    // For Whop iframe, we'll skip auth check for now to get it working
-    // const { userId } = await requireAccess(params.experienceId);
+    // Try to get user from Whop iframe token
+    let userId: string | null = null;
+    let currentUserStreak = null;
+    
+    try {
+      const hdrs = await headers();
+      const token = hdrs.get("x-whop-user-token");
+      
+      if (token) {
+        const tokenData = await verifyUserToken(token);
+        userId = tokenData.userId;
+        
+        // Get current user's streak if authenticated
+        if (userId) {
+          currentUserStreak = await prisma.streak.findUnique({
+            where: {
+              experienceId_userId: {
+                experienceId: params.experienceId,
+                userId,
+              },
+            },
+            include: {
+              user: true,
+            },
+          });
+        }
+      }
+    } catch (authError) {
+      // Auth is optional for viewing - just log the error
+      console.log("Auth token not available:", authError);
+    }
     
     // Create experience if it doesn't exist
     let experience = await prisma.experience.findUnique({
@@ -81,6 +111,26 @@ export default async function ExperiencePage({
               </p>
             )}
           </div>
+
+          {/* Current User Streak - Show if authenticated */}
+          {currentUserStreak && (
+            <div className="mb-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-6 text-white">
+              <h3 className="text-xl font-bold mb-2">Your Streak</h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold">
+                    {currentUserStreak.current} day{currentUserStreak.current !== 1 ? 's' : ''}
+                  </div>
+                  <div className="text-sm opacity-90">
+                    Best: {currentUserStreak.best} days
+                  </div>
+                </div>
+                <div className="text-6xl">
+                  {currentUserStreak.current >= 7 ? '🏆' : currentUserStreak.current >= 3 ? '🔥' : '✨'}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid md:grid-cols-2 gap-8">
             {/* Current Streaks */}
