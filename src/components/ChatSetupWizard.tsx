@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { getChatSetupInstructions } from "@/lib/chat-detection";
 
 interface ChatSetupWizardProps {
   companyId?: string;
@@ -15,7 +14,14 @@ export default function ChatSetupWizard({ companyId, onSkip, onComplete }: ChatS
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState("");
 
-  const instructions = getChatSetupInstructions();
+  // Inline instructions to avoid importing server-side code
+  const instructions = [
+    "Install Whop Chat from the Whop App Store",
+    "Create a chat channel for your community",
+    "Come back to QuestChat and connect it to your chat",
+    "Configure your daily prompts and rewards",
+    "Watch engagement soar! 🚀",
+  ];
 
   const validateAndComplete = async () => {
     if (!experienceId.trim()) {
