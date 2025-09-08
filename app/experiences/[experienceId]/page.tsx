@@ -29,8 +29,8 @@ export default async function ExperiencePage({
     const topStreaks = await prisma.streak.findMany({
       where: { experienceId: params.experienceId },
       orderBy: [
-        { currentStreak: 'desc' },
-        { bestStreak: 'desc' },
+        { current: 'desc' },
+        { best: 'desc' },
       ],
       take: 20,
       include: {
@@ -96,10 +96,10 @@ export default async function ExperiencePage({
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-orange-600">
-                          {streak.currentStreak}
+                          {streak.current}
                         </div>
                         <div className="text-xs text-gray-500">
-                          Best: {streak.bestStreak}
+                          Best: {streak.best}
                         </div>
                       </div>
                     </div>

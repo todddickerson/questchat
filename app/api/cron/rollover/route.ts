@@ -71,12 +71,22 @@ export async function POST(request: NextRequest) {
         // Process each user's first message
         const userMessages = new Map<string, any>();
         for (const post of messages.posts) {
-          // Skip system messages
-          if (!post.userId || post.userId === "SYSTEM") continue;
+          // Type guard and extract user info from different post types
+          const postData = post as any;
+          const userId = postData.user?.id || postData.userId || postData.sender?.id;
+          const username = postData.user?.username || postData.username || postData.sender?.username;
+          
+          // Skip if no user ID or if it's a system message
+          if (!userId || userId === "SYSTEM") continue;
           
           // Only track first message per user
-          if (!userMessages.has(post.userId)) {
-            userMessages.set(post.userId, post);
+          if (!userMessages.has(userId)) {
+            userMessages.set(userId, {
+              ...postData,
+              userId,
+              username,
+              createdAt: postData.createdAt || postData.created_at || new Date(),
+            });
           }
         }
 
@@ -84,7 +94,7 @@ export async function POST(request: NextRequest) {
         const streakUpdates = [];
         const rewards = [];
 
-        for (const [userId, message] of userMessages) {
+        for (const [userId, message] of Array.from(userMessages.entries())) {
           // Check if we already processed this user today
           const existingLog = await prisma.messageLog.findUnique({
             where: {
@@ -118,43 +128,60 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          // Update streak
-          const streak = await prisma.streak.upsert({
+          // Update or create streak
+          let streak = await prisma.streak.findUnique({
             where: {
               experienceId_userId: {
                 experienceId: experience.experienceId,
                 userId: user.id,
               },
             },
-            update: {
-              currentStreak: { increment: 1 },
-              bestStreak: { increment: 1 },
-              weekCount: { increment: 1 },
-              lastActiveAt: new Date(),
-            },
-            create: {
-              experienceId: experience.experienceId,
-              userId: user.id,
-              currentStreak: 1,
-              bestStreak: 1,
-              weekCount: 1,
-              lastActiveAt: new Date(),
-            },
           });
+
+          if (streak) {
+            // Update existing streak
+            streak = await prisma.streak.update({
+              where: {
+                experienceId_userId: {
+                  experienceId: experience.experienceId,
+                  userId: user.id,
+                },
+              },
+              data: {
+                current: streak.current + 1,
+                best: Math.max(streak.best, streak.current + 1),
+                weekCount: streak.weekCount + 1,
+                lastPostAt: new Date(),
+              },
+            });
+          } else {
+            // Create new streak
+            streak = await prisma.streak.create({
+              data: {
+                experienceId: experience.experienceId,
+                userId: user.id,
+                current: 1,
+                best: 1,
+                weekCount: 1,
+                lastPostAt: new Date(),
+              },
+            });
+          }
 
           streakUpdates.push({
             userId: user.id,
-            currentStreak: streak.currentStreak,
+            currentStreak: streak.current,
           });
 
           // Check for rewards (3 and 7 day streaks)
-          if (streak.currentStreak === 3 || streak.currentStreak === 7) {
+          if (streak.current === 3 || streak.current === 7) {
             // Check if reward already exists
             const existingReward = await prisma.reward.findFirst({
               where: {
                 userId: user.id,
                 experienceId: experience.experienceId,
-                streakDay: streak.currentStreak,
+                threshold: streak.current,
+                type: 'streak',
               },
             });
 
@@ -163,11 +190,12 @@ export async function POST(request: NextRequest) {
                 // Create promo code
                 const { promoCode, issuedCode } = await createPromoCode(
                   experience.accessPassId,
+                  user.id,
                   user.username || user.whopUserId,
                   {
-                    percentage: experience.config.percentage,
-                    stock: experience.config.stock,
-                    expiryDays: experience.config.expiryDays,
+                    percentage: experience.config.rewardPercentage,
+                    stock: experience.config.rewardStock,
+                    expiryDays: experience.config.rewardExpiryDays,
                   }
                 );
 
@@ -176,15 +204,16 @@ export async function POST(request: NextRequest) {
                   data: {
                     userId: user.id,
                     experienceId: experience.experienceId,
-                    streakDay: streak.currentStreak,
-                    codeId: issuedCode.id,
+                    type: 'streak',
+                    threshold: streak.current,
+                    issuedCodeId: issuedCode.id,
                   },
                 });
 
                 // Send congratulations message
                 const congratsMessage = `🎉 **Congratulations ${user.username || 'Champion'}!** 🎉\n\n` +
-                  `You've reached a **${streak.currentStreak}-day streak!** 🔥\n\n` +
-                  `Here's your reward: **${experience.config.percentage}% OFF**\n` +
+                  `You've reached a **${streak.current}-day streak!** 🔥\n\n` +
+                  `Here's your reward: **${experience.config.rewardPercentage}% OFF**\n` +
                   `Promo Code: \`${issuedCode.code}\`\n\n` +
                   `Keep going for more rewards! 🚀`;
 
@@ -192,7 +221,7 @@ export async function POST(request: NextRequest) {
 
                 rewards.push({
                   userId: user.id,
-                  streakDay: streak.currentStreak,
+                  streakDay: streak.current,
                   code: issuedCode.code,
                 });
               } catch (error) {
@@ -216,7 +245,7 @@ export async function POST(request: NextRequest) {
               },
             },
             data: {
-              currentStreak: 0,
+              current: 0,
             },
           });
         }
