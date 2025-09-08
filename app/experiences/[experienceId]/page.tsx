@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { requireAccess } from "@/lib/auth";
+import WhopClient from "./whop-client";
 
 export default async function ExperiencePage({
   params,
@@ -66,8 +67,9 @@ export default async function ExperiencePage({
     });
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-8">
-        <div className="max-w-6xl mx-auto">
+      <WhopClient>
+        <div className="p-8">
+          <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2 text-gray-900">
               🎯 QuestChat Leaderboard
@@ -189,7 +191,8 @@ export default async function ExperiencePage({
             </p>
           </div>
         </div>
-      </div>
+        </div>
+      </WhopClient>
     );
   } catch (error) {
     console.error("Error loading experience:", error);
