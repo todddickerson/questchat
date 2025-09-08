@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { WhopIframeSdkProvider } from '@whop/react'
+import { Providers } from './providers'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -18,11 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <WhopIframeSdkProvider>
+        <Providers>
           <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
             {children}
           </div>
-        </WhopIframeSdkProvider>
+        </Providers>
       </body>
     </html>
   )
