@@ -18,6 +18,7 @@ export async function findOrCreateChat(accessPassId?: string) {
     if (accessPassId) {
       const result = await whop.messages.findOrCreateChat({
         accessPassId,
+        name: "QuestChat Community", // Required field
       });
       return result;
     }
@@ -38,11 +39,11 @@ export async function listMessages(
     });
     
     // Filter by timestamp if provided
-    if (since) {
+    if (since && result?.posts) {
       return {
         ...result,
-        data: result.data.filter((message) => 
-          new Date(message.createdAt).getTime() >= since
+        posts: result.posts.filter((post: any) => 
+          new Date(post.createdAt).getTime() >= since
         ),
       };
     }

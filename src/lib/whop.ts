@@ -1,5 +1,3 @@
-"use server";
-
 import { WhopServerSdk, makeUserTokenVerifier } from "@whop/api";
 
 if (!process.env.WHOP_API_KEY) {

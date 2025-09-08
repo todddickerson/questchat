@@ -31,6 +31,10 @@ export async function createPromoCode(
       newUsersOnly: false,
     });
 
+    if (!promoCode) {
+      throw new Error("Failed to create promo code");
+    }
+
     // Store the issued code in our database
     const issuedCode = await prisma.issuedCode.create({
       data: {
