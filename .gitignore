@@ -8,6 +8,11 @@ coverage/
 test-whop-integration.js
 whop-integration-*.png
 questchat-*.png
+playwright-user-data/
+/tmp/
+test-*.js
+*.png
+test-whop-logged-in.js
 
 # Next.js
 .next/
