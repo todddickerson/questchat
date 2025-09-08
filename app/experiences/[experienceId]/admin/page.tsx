@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import ExperienceWrapper from "@/components/ExperienceWrapper";
+import ExperienceWrapper from "@/src/components/ExperienceWrapper";
 
 export default function AdminPage() {
   const params = useParams();

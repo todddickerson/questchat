@@ -19,12 +19,17 @@ export function middleware(request: NextRequest) {
     // Set CORS headers for Whop
     response.headers.set('Access-Control-Allow-Origin', origin || '*');
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Whop-User-ID, X-Whop-Signature');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-whop-user-token, x-questchat-signature, X-Whop-User-ID, X-Whop-Signature');
     response.headers.set('Access-Control-Allow-Credentials', 'true');
     
     // Allow iframe embedding from Whop
     response.headers.set('X-Frame-Options', 'ALLOWALL');
     response.headers.set('Content-Security-Policy', "frame-ancestors 'self' https://*.whop.com https://whop.com");
+  } else {
+    // Set basic CORS for non-Whop requests (API routes still need CORS)
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   }
   
   // Log requests for debugging
