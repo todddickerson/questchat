@@ -57,8 +57,12 @@ export async function POST(request: NextRequest) {
           leaderboardMessage += "\n🎯 Keep up the great work, champions!\n";
           leaderboardMessage += "📅 *Weekly leaderboard resets every Monday*";
 
-          // Post to chat
-          await sendChat(experience.experienceId, leaderboardMessage);
+          // Try to post to chat (don't fail if chat is unavailable)
+          try {
+            await sendChat(experience.experienceId, leaderboardMessage);
+          } catch (chatError) {
+            console.error(`Failed to post weekly leaderboard to chat:`, chatError);
+          }
         }
 
         // Reset weekly counts

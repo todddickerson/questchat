@@ -37,7 +37,15 @@ export async function POST(request: NextRequest) {
     const prompt = getRandomPrompt();
     const message = `🌟 **Daily Quest** (${today})\n\n${prompt}\n\n💡 *First reply counts toward your streak!*`;
 
-    await sendChat(experienceId, message);
+    try {
+      await sendChat(experienceId, message);
+    } catch (chatError) {
+      console.error("Failed to send chat message:", chatError);
+      return NextResponse.json(
+        { error: "Failed to send message to chat. Is the experience ID valid?" },
+        { status: 400 }
+      );
+    }
 
     // Record that we posted the prompt
     await prisma.messageLog.create({

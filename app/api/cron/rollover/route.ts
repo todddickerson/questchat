@@ -54,13 +54,19 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Get messages since the prompt
-        const messages = await listMessages(
-          experience.experienceId,
-          systemPrompt.firstPostAt.getTime()
-        );
+        // Try to get messages since the prompt
+        let messages: any = { posts: [] };
+        try {
+          messages = await listMessages(
+            experience.experienceId,
+            systemPrompt.firstPostAt.getTime()
+          );
+        } catch (chatError) {
+          console.error(`Chat API error for ${experience.experienceId}:`, chatError);
+          // Continue processing with empty messages - allows testing without valid chat
+        }
 
-        if (!messages?.posts) {
+        if (!messages?.posts || messages.posts.length === 0) {
           results.push({
             experienceId: experience.experienceId,
             status: "no_messages",
@@ -111,7 +117,9 @@ export async function POST(request: NextRequest) {
           // Find or create user
           const user = await prisma.user.upsert({
             where: { whopUserId: userId },
-            update: {},
+            update: {
+              username: message.username || undefined,
+            },
             create: {
               whopUserId: userId,
               username: message.username || null,
@@ -122,7 +130,7 @@ export async function POST(request: NextRequest) {
           await prisma.messageLog.create({
             data: {
               experienceId: experience.experienceId,
-              userId: user.id,
+              userId: user.whopUserId,
               dayKey: yesterday,
               firstPostAt: new Date(message.createdAt),
             },
@@ -133,7 +141,7 @@ export async function POST(request: NextRequest) {
             where: {
               experienceId_userId: {
                 experienceId: experience.experienceId,
-                userId: user.id,
+                userId: user.whopUserId,
               },
             },
           });
@@ -144,7 +152,7 @@ export async function POST(request: NextRequest) {
               where: {
                 experienceId_userId: {
                   experienceId: experience.experienceId,
-                  userId: user.id,
+                  userId: user.whopUserId,
                 },
               },
               data: {
@@ -159,7 +167,7 @@ export async function POST(request: NextRequest) {
             streak = await prisma.streak.create({
               data: {
                 experienceId: experience.experienceId,
-                userId: user.id,
+                userId: user.whopUserId,
                 current: 1,
                 best: 1,
                 weekCount: 1,
@@ -169,7 +177,8 @@ export async function POST(request: NextRequest) {
           }
 
           streakUpdates.push({
-            userId: user.id,
+            userId: user.whopUserId,
+            username: user.username,
             currentStreak: streak.current,
           });
 
@@ -178,51 +187,57 @@ export async function POST(request: NextRequest) {
             // Check if reward already exists
             const existingReward = await prisma.reward.findFirst({
               where: {
-                userId: user.id,
+                userId: user.whopUserId,
                 experienceId: experience.experienceId,
-                threshold: streak.current,
-                type: 'streak',
+                streakDays: streak.current,
               },
             });
 
-            if (!existingReward && experience.accessPassId) {
+            if (!existingReward) {
               try {
-                // Create promo code
-                const { promoCode, issuedCode } = await createPromoCode(
-                  experience.accessPassId,
-                  user.id,
-                  user.username || user.whopUserId,
-                  {
+                // Generate promo code
+                const code = `STREAK${streak.current}_${user.whopUserId.slice(-6)}_${Date.now().toString(36)}`.toUpperCase();
+                
+                // Create issued code record
+                const issuedCode = await prisma.issuedCode.create({
+                  data: {
+                    code,
+                    experienceId: experience.experienceId,
+                    userId: user.whopUserId,
                     percentage: experience.config.rewardPercentage,
-                    stock: experience.config.rewardStock,
-                    expiryDays: experience.config.rewardExpiryDays,
-                  }
-                );
+                    expiresAt: new Date(Date.now() + experience.config.rewardExpiryDays * 24 * 60 * 60 * 1000),
+                  },
+                });
 
                 // Create reward record
                 const reward = await prisma.reward.create({
                   data: {
-                    userId: user.id,
+                    userId: user.whopUserId,
                     experienceId: experience.experienceId,
-                    type: 'streak',
-                    threshold: streak.current,
+                    streakDays: streak.current,
+                    rewardType: 'promo_code',
+                    rewardValue: code,
                     issuedCodeId: issuedCode.id,
                   },
                 });
 
-                // Send congratulations message
-                const congratsMessage = `🎉 **Congratulations ${user.username || 'Champion'}!** 🎉\n\n` +
-                  `You've reached a **${streak.current}-day streak!** 🔥\n\n` +
-                  `Here's your reward: **${experience.config.rewardPercentage}% OFF**\n` +
-                  `Promo Code: \`${issuedCode.code}\`\n\n` +
-                  `Keep going for more rewards! 🚀`;
+                // Try to send congratulations message (don't fail if chat is unavailable)
+                try {
+                  const congratsMessage = `🎉 **Congratulations ${user.username || 'Champion'}!** 🎉\n\n` +
+                    `You've reached a **${streak.current}-day streak!** 🔥\n\n` +
+                    `Here's your reward: **${experience.config.rewardPercentage}% OFF**\n` +
+                    `Promo Code: \`${code}\`\n\n` +
+                    `Keep going for more rewards! 🚀`;
 
-                await sendChat(experience.experienceId, congratsMessage);
+                  await sendChat(experience.experienceId, congratsMessage);
+                } catch (chatError) {
+                  console.error(`Failed to send congrats message:`, chatError);
+                }
 
                 rewards.push({
-                  userId: user.id,
+                  userId: user.whopUserId,
                   streakDay: streak.current,
-                  code: issuedCode.code,
+                  code,
                 });
               } catch (error) {
                 console.error(`Failed to create reward for user ${user.id}:`, error);
@@ -232,22 +247,23 @@ export async function POST(request: NextRequest) {
         }
 
         // Reset streaks for users who didn't respond
-        const activeUsers = Array.from(userMessages.keys());
-        if (activeUsers.length > 0) {
-          await prisma.streak.updateMany({
-            where: {
-              experienceId: experience.experienceId,
-              userId: {
-                notIn: await prisma.user.findMany({
-                  where: { whopUserId: { in: activeUsers } },
-                  select: { id: true },
-                }).then(users => users.map(u => u.id)),
-              },
-            },
-            data: {
-              current: 0,
-            },
-          });
+        const activeUserIds = Array.from(userMessages.keys());
+        const allStreaks = await prisma.streak.findMany({
+          where: {
+            experienceId: experience.experienceId,
+            current: { gt: 0 },
+          },
+        });
+
+        let resetCount = 0;
+        for (const streak of allStreaks) {
+          if (!activeUserIds.includes(streak.userId)) {
+            await prisma.streak.update({
+              where: { id: streak.id },
+              data: { current: 0 },
+            });
+            resetCount++;
+          }
         }
 
         results.push({
