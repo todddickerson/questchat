@@ -34,11 +34,13 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",
     "eslint-config-next": "14.0.4",
+    "playwright": "^1.55.0",
     "typescript": "^5",
     "vercel": "^47.0.5"
   }
