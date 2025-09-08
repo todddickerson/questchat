@@ -74,3 +74,4 @@ questchat/
 4. Deploy to your preferred platform
 
 > See SETUP.md for detailed setup instructions and DEPLOY.md for deployment guide.
+# Triggering deployment - Mon Sep  8 14:25:40 EDT 2025
