@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/db";
 import { headers } from "next/headers";
 import { verifyUserToken } from "@/lib/whop";
-import WhopClient from "./whop-client";
-import ExperienceWrapper from "@/components/ExperienceWrapper";
+import ClientWrapper from "./client-wrapper";
 
 export default async function ExperiencePage({
   params,
@@ -98,10 +97,9 @@ export default async function ExperiencePage({
     });
 
     return (
-      <WhopClient>
-        <ExperienceWrapper experienceId={params.experienceId}>
-          <div className="p-8">
-            <div className="max-w-6xl mx-auto">
+      <ClientWrapper experienceId={params.experienceId}>
+        <div className="p-8">
+          <div className="max-w-6xl mx-auto">
             <div className="text-center mb-8">
               <h1 className="text-4xl font-bold mb-2 text-gray-900">
                 🎯 QuestChat Leaderboard
@@ -243,9 +241,8 @@ export default async function ExperiencePage({
               </p>
             </div>
           </div>
-          </div>
-        </ExperienceWrapper>
-      </WhopClient>
+        </div>
+      </ClientWrapper>
     );
   } catch (error) {
     console.error("Error loading experience:", error);
