@@ -9,6 +9,7 @@ async function seedExperience() {
     // Check if experience exists
     let experience = await prisma.experience.findUnique({
       where: { experienceId },
+      include: { config: true },
     });
     
     if (!experience) {
@@ -19,6 +20,7 @@ async function seedExperience() {
           name: "FitBro2 QuestChat",
           accessPassId: "prod_01HZ3QXKBFZ8W5X9Y2V7T6N4M8", // You may need to update this
         },
+        include: { config: true },
       });
       console.log("✅ Experience created");
     } else {

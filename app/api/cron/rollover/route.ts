@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
               where: {
                 userId: user.whopUserId,
                 experienceId: experience.experienceId,
-                streakDays: streak.current,
+                threshold: streak.current,
               },
             });
 
@@ -202,9 +202,6 @@ export async function POST(request: NextRequest) {
                 const issuedCode = await prisma.issuedCode.create({
                   data: {
                     code,
-                    experienceId: experience.experienceId,
-                    userId: user.whopUserId,
-                    percentage: experience.config.rewardPercentage,
                     expiresAt: new Date(Date.now() + experience.config.rewardExpiryDays * 24 * 60 * 60 * 1000),
                   },
                 });
@@ -214,9 +211,8 @@ export async function POST(request: NextRequest) {
                   data: {
                     userId: user.whopUserId,
                     experienceId: experience.experienceId,
-                    streakDays: streak.current,
-                    rewardType: 'promo_code',
-                    rewardValue: code,
+                    type: 'streak',
+                    threshold: streak.current,
                     issuedCodeId: issuedCode.id,
                   },
                 });

@@ -15,23 +15,10 @@ export default function WhopClient({ children }: { children: React.ReactNode }) 
       try {
         console.log("🔧 Initializing Whop SDK...");
         
-        const sdk = await createAppIframeSDK({
-          onMessage: {
-            onUserUpdated: (data) => {
-              console.log("👤 User updated:", data);
-              setUser(data);
-            },
-          },
-        });
+        const sdk = await createAppIframeSDK({});
 
-        // Get initial user data
-        try {
-          const userData = await sdk.getUserInfo();
-          console.log("✅ Got user info:", userData);
-          setUser(userData);
-        } catch (err) {
-          console.log("ℹ️ Could not get user info (might not be in iframe):", err);
-        }
+        // SDK initialized successfully
+        console.log("✅ Whop SDK initialized");
 
         // Store cleanup function
         cleanup = sdk._cleanupTransport;
