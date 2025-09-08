@@ -5,17 +5,12 @@
       "schedule": "0 9 * * *"
     },
     {
-      "path": "/api/cron/rollover", 
+      "path": "/api/cron/rollover",
       "schedule": "5 0 * * *"
     },
     {
       "path": "/api/cron/week",
       "schedule": "0 9 * * 1"
     }
-  ],
-  "functions": {
-    "app/api/cron/**": {
-      "maxDuration": 300
-    }
-  }
+  ]
 }
