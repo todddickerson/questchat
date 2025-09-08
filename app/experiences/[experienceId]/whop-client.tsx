@@ -1,28 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createAppIframeSDK } from "@whop-apps/sdk";
+import { useIframeSdk } from "@whop/react";
 
 export default function WhopClient({ children }: { children: React.ReactNode }) {
+  const iframeSdk = useIframeSdk();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
-
     const initWhopSDK = async () => {
       try {
         console.log("🔧 Initializing Whop SDK...");
         
-        const sdk = await createAppIframeSDK({});
-
-        // SDK initialized successfully
-        console.log("✅ Whop SDK initialized");
-
-        // Store cleanup function
-        cleanup = sdk._cleanupTransport;
-        setIsLoading(false);
+        // The iframe SDK is automatically initialized by the provider
+        // We can directly use it here
+        if (iframeSdk) {
+          console.log("✅ Whop SDK ready");
+          setIsLoading(false);
+        }
       } catch (err) {
         console.error("❌ Failed to initialize Whop SDK:", err);
         setError(err instanceof Error ? err.message : "Failed to initialize");
@@ -30,18 +27,11 @@ export default function WhopClient({ children }: { children: React.ReactNode }) 
       }
     };
 
-    // Only initialize on client side
-    if (typeof window !== "undefined") {
+    // Initialize when iframe SDK is available
+    if (iframeSdk) {
       initWhopSDK();
     }
-
-    // Cleanup on unmount
-    return () => {
-      if (cleanup) {
-        cleanup();
-      }
-    };
-  }, []);
+  }, [iframeSdk]);
 
   // Show debug info if not in iframe
   if (!isLoading && !user) {
