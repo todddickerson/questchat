@@ -10,12 +10,26 @@ export default async function ExperiencePage({
     // For Whop iframe, we'll skip auth check for now to get it working
     // const { userId } = await requireAccess(params.experienceId);
     
-    const experience = await prisma.experience.findUnique({
+    // Create experience if it doesn't exist
+    let experience = await prisma.experience.findUnique({
       where: { experienceId: params.experienceId },
       include: {
         config: true,
       },
     });
+
+    if (!experience) {
+      // Auto-create the experience
+      experience = await prisma.experience.create({
+        data: {
+          experienceId: params.experienceId,
+          name: "QuestChat Experience",
+        },
+        include: {
+          config: true,
+        },
+      });
+    }
 
     // Get today's date for display
     const today = new Date().toLocaleDateString('en-US', {
@@ -59,7 +73,7 @@ export default async function ExperiencePage({
               🎯 QuestChat Leaderboard
             </h1>
             <p className="text-gray-600">{today}</p>
-            {experience?.name && (
+            {experience.name && (
               <p className="text-lg mt-2 text-purple-600 font-semibold">
                 {experience.name}
               </p>
