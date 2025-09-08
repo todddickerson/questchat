@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateSignature } from "@/src/lib/auth";
-import { sendChat, getRandomPrompt } from "@/src/lib/chat";
-import { prisma } from "@/src/lib/db";
+import { validateSignature } from "@/lib/auth";
+import { sendChat, getRandomPrompt } from "@/lib/chat";
+import { prisma } from "@/lib/db";
 import { format } from "date-fns";
 
 export async function POST(request: NextRequest) {
