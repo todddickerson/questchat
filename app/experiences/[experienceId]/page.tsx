@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { headers } from "next/headers";
 import { verifyUserToken } from "@/lib/whop";
 import WhopClient from "./whop-client";
-import ExperienceWrapper from "@/src/components/ExperienceWrapper";
+import ExperienceWrapper from "@/components/ExperienceWrapper";
 
 export default async function ExperiencePage({
   params,
