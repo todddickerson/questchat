@@ -8,7 +8,7 @@
     "vercel-build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "npx prisma generate",
+    "postinstall": "prisma generate || true",
     "whop-proxy": "whop-proxy",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
