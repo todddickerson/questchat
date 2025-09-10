@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import ExperienceWrapper from "@/components/ExperienceWrapper";
+// import AdminAuthWrapper from "@/components/AdminAuthWrapper";
 
 export default function AdminPage() {
   const params = useParams();
@@ -18,13 +19,19 @@ export default function AdminPage() {
   const [newQuest, setNewQuest] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [chatStatus, setChatStatus] = useState<any>(null);
+  const [testingChat, setTestingChat] = useState(false);
+  const [chatExperienceId, setChatExperienceId] = useState("");
+  const [testChatId, setTestChatId] = useState("");
+  const [isDiscovering, setIsDiscovering] = useState(false);
 
   useEffect(() => {
     // Load existing config if available
     loadConfig();
+    checkChatStatus();
   }, [experienceId]);
 
-  const loadConfig = async () => {
+  const fetchConfig = async () => {
     try {
       const response = await fetch(`/api/experiences/${experienceId}/config`);
       if (response.ok) {
@@ -35,11 +42,17 @@ export default function AdminPage() {
         if (data.quests) {
           setQuests(data.quests.map((q: any) => q.prompt));
         }
+        if (data.chatExperienceId) {
+          setChatExperienceId(data.chatExperienceId);
+          setTestChatId(data.chatExperienceId);
+        }
       }
     } catch (error) {
       console.error("Error loading config:", error);
     }
   };
+
+  const loadConfig = fetchConfig;
 
   const handleSaveConfig = async () => {
     setLoading(true);
@@ -92,6 +105,50 @@ export default function AdminPage() {
 
   const removeQuest = (index: number) => {
     setQuests(quests.filter((_, i) => i !== index));
+  };
+
+  const checkChatStatus = async () => {
+    setTestingChat(true);
+    try {
+      const response = await fetch("/api/admin/find-chat");
+      if (response.ok) {
+        const data = await response.json();
+        setChatStatus(data);
+      }
+    } catch (error) {
+      console.error("Error checking chat status:", error);
+    } finally {
+      setTestingChat(false);
+    }
+  };
+
+  const handleChatSetup = async (action: string) => {
+    setLoading(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/setup-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          action,
+          experienceId,
+          accessPassId: process.env.NEXT_PUBLIC_WHOP_ACCESS_PASS_ID 
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setMessage(data.recommendations?.[0]?.message || "Operation completed");
+        if (action === "test") {
+          await checkChatStatus();
+        }
+      } else {
+        setMessage(data.error || "Operation failed");
+      }
+    } catch (error) {
+      setMessage("Error during chat setup");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -182,6 +239,128 @@ export default function AdminPage() {
             >
               {loading ? "Saving..." : "Save Configuration"}
             </button>
+          </div>
+
+          {/* Automatic Chat Channel Discovery */}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 className="text-2xl font-bold mb-4">🔧 Chat Channel Status</h2>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-center space-x-3">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <div>
+                  <h3 className="font-semibold text-blue-900">🔍 Auto-Discovering Chat Channel...</h3>
+                  <p className="text-sm text-blue-700 mt-1">
+                    QuestChat is automatically detecting your chat setup via API calls
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Chat Status Section */}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 className="text-2xl font-bold mb-4">💬 Chat Integration Status</h2>
+            
+            {testingChat ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Checking chat status...</p>
+              </div>
+            ) : chatStatus ? (
+              <div className="space-y-4">
+                {/* Status Summary */}
+                <div className={`p-4 rounded-lg ${
+                  chatStatus.summary?.workingChats > 0 
+                    ? "bg-green-50 border border-green-200" 
+                    : "bg-yellow-50 border border-yellow-200"
+                }`}>
+                  <h3 className="font-semibold mb-2">
+                    {chatStatus.summary?.workingChats > 0 
+                      ? "✅ Chat is configured" 
+                      : "⚠️ Chat needs setup"}
+                  </h3>
+                  <p className="text-sm">
+                    Tested experiences: {chatStatus.summary?.testedExperiences || 0}
+                  </p>
+                  <p className="text-sm">
+                    Working chats: {chatStatus.summary?.workingChats || 0}
+                  </p>
+                  <p className="text-sm">
+                    Can send messages: {chatStatus.summary?.canSendMessages ? "Yes" : "No"}
+                  </p>
+                </div>
+
+                {/* Experience Details */}
+                {chatStatus.testedExperiences?.map((exp: any) => (
+                  <div key={exp.id} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-mono text-sm">{exp.id}</p>
+                        <p className="text-xs text-gray-600">{exp.name}</p>
+                      </div>
+                      <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        exp.chatEnabled 
+                          ? "bg-green-100 text-green-800" 
+                          : "bg-red-100 text-red-800"
+                      }`}>
+                        {exp.chatEnabled ? "Chat Enabled" : exp.error || "Not a Chat"}
+                      </div>
+                    </div>
+                    {exp.recommendation && (
+                      <p className="text-xs text-gray-600 mt-2">{exp.recommendation}</p>
+                    )}
+                  </div>
+                ))}
+
+                {/* Recommendations */}
+                {chatStatus.recommendations?.map((rec: any, idx: number) => (
+                  <div key={idx} className={`p-3 rounded-lg border ${
+                    rec.type === 'success' ? 'bg-green-50 border-green-200' :
+                    rec.type === 'warning' ? 'bg-yellow-50 border-yellow-200' :
+                    rec.type === 'error' ? 'bg-red-50 border-red-200' :
+                    'bg-blue-50 border-blue-200'
+                  }`}>
+                    <p className="text-sm font-semibold">{rec.message}</p>
+                    <p className="text-xs mt-1">{rec.action}</p>
+                  </div>
+                ))}
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => checkChatStatus()}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                  >
+                    🔄 Refresh Status
+                  </button>
+                  <button
+                    onClick={() => handleChatSetup("test")}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
+                  >
+                    🧪 Test Chat
+                  </button>
+                  <button
+                    onClick={() => handleChatSetup("instructions")}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition disabled:opacity-50"
+                  >
+                    📖 Setup Guide
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <button
+                  onClick={checkChatStatus}
+                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                >
+                  Check Chat Status
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6">

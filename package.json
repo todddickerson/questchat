@@ -10,7 +10,7 @@
     "lint": "next lint",
     "postinstall": "prisma generate || true",
     "whop-proxy": "pnpm dlx @whop-apps/dev-proxy --command 'next dev --turbo'",
-    "whop-dev": "pnpm dlx @whop-apps/dev-proxy --proxyPort 3000 --upstreamPort 3001 --command 'next dev --port 3001 --turbo'",
+    "whop-dev": "pnpm dlx @whop-apps/dev-proxy --proxyPort 3002 --upstreamPort 3001 --command 'next dev --port 3001 --turbo'",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
@@ -44,5 +44,6 @@
     "playwright": "^1.55.0",
     "typescript": "^5",
     "vercel": "^47.0.5"
-  }
+  },
+  "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
 }

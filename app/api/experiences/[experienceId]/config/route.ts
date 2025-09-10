@@ -47,6 +47,7 @@ export async function GET(
         id: q.id,
         prompt: q.title,
       })),
+      chatExperienceId: experience.chatExperienceId,
     });
   } catch (error) {
     console.error("Error fetching config:", error);

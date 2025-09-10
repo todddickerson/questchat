@@ -1,0 +1,9 @@
+{
+  "browsertools": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "@agentdesk/browser-tools"
+    ]
+  }
+}

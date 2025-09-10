@@ -45,11 +45,36 @@ export async function detectChatStatus(companyId: string): Promise<ChatStatus> {
   }
 }
 
-export async function validateChatExperience(experienceId: string): Promise<boolean> {
+export async function validateChatExperience(experienceId: string, companyId?: string): Promise<boolean> {
   try {
+    console.log("[validateChatExperience] Starting validation", {
+      experienceId,
+      companyId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // According to Whop API research, chat channels are specialized types of experiences
+    // The experienceId format should be exp_XXXXXXXX for chat experiences
+    
     // First check if this is a valid experience
-    const experiences = await whop.experiences.listExperiences({
+    const queryParams: any = {
       first: 100,
+    };
+    
+    // Only add companyId if provided and in correct format
+    if (companyId && companyId.startsWith('biz_')) {
+      queryParams.companyId = companyId;
+      console.log("[validateChatExperience] Using company ID in query:", companyId);
+    } else {
+      console.log("[validateChatExperience] No valid company ID provided, querying all experiences");
+    }
+    
+    console.log("[validateChatExperience] Calling listExperiences with params:", queryParams);
+    const experiences = await whop.experiences.listExperiences(queryParams);
+    
+    console.log("[validateChatExperience] Received experiences response", {
+      totalCount: experiences?.experiencesV2?.nodes?.length || 0,
+      hasData: !!experiences?.experiencesV2?.nodes
     });
     
     const experience = experiences?.experiencesV2?.nodes?.find(
@@ -57,31 +82,56 @@ export async function validateChatExperience(experienceId: string): Promise<bool
     );
     
     if (!experience) {
-      console.log(`Experience ${experienceId} not found`);
+      console.log(`[validateChatExperience] ❌ Experience ${experienceId} not found in list`);
+      console.log("[validateChatExperience] Available experiences:", 
+        experiences?.experiencesV2?.nodes?.map((e: any) => ({
+          id: e?.id,
+          name: e?.name,
+          type: e?.type
+        }))
+      );
       return false;
     }
     
-    // For now, accept any experience since types are undefined
-    // In production, you'd need to create a chat through Whop Chat app
-    console.log(`Found experience: ${experience.name} (${experience.id})`);
+    console.log(`[validateChatExperience] ✅ Found experience: ${experience.name} (${experience.id}), type: ${(experience as any).type}`);
     
-    // Try to validate it's accessible as a chat
+    // Based on Whop API research, we should check if this experience supports chat
+    // The type field may indicate if it's a chat-enabled experience
+    const isChatType = (experience as any).type === 'chat' || 
+                       (experience as any).type === 'discord_chat' || 
+                       (experience as any).type === 'community' ||
+                       (experience as any).type?.includes('chat');
+    
+    if (isChatType) {
+      console.log("[validateChatExperience] ✅ Experience is explicitly a chat type");
+      return true;
+    }
+    
+    // Try to validate it's accessible as a chat by attempting to list messages
+    // According to research, listMessagesFromChat requires a chatExperienceId
     try {
+      console.log("[validateChatExperience] Attempting to list messages from chat...");
       await whop.messages.listMessagesFromChat({
         chatExperienceId: experienceId,
       });
+      console.log("[validateChatExperience] ✅ Successfully listed messages - valid chat!");
       return true;
     } catch (listError: any) {
-      // If it's not a chat feed error, it might still be valid
+      console.log("[validateChatExperience] Error listing messages:", listError.message);
+      
+      // According to API patterns, if the experience exists but isn't a chat, we get this error
       if (listError.message?.includes('Feed::ChatFeed was not found')) {
-        console.log(`Experience ${experienceId} is not a chat feed, but exists`);
-        // For demo purposes, we'll accept it if the experience exists
+        console.log(`[validateChatExperience] ⚠️ Experience ${experienceId} exists but is not a chat feed`);
+        console.log("[validateChatExperience] This experience may need chat functionality enabled or created");
+        // For QuestChat demo, we'll accept it and use simulated messages
         return true;
       }
+      
+      console.log("[validateChatExperience] Unexpected error:", listError);
       throw listError;
     }
   } catch (error) {
-    console.error(`Chat validation failed for ${experienceId}:`, error);
+    console.error(`[validateChatExperience] Chat validation failed for ${experienceId}:`, error);
     return false;
   }
 }

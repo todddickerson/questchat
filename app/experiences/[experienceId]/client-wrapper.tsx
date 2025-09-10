@@ -39,19 +39,26 @@ export default function ClientWrapper({ experienceId, children }: ClientWrapperP
   // If not in iframe, show debug message
   if (!inIframe) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-8">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 md:p-6 mb-6">
             <h2 className="text-lg font-semibold text-yellow-800 mb-2">
               ⚠️ Not in Whop iframe
             </h2>
-            <p className="text-yellow-700">
+            <p className="text-yellow-700 text-sm md:text-base">
               This page is designed to be embedded in a Whop experience. 
               Direct access will show limited functionality.
             </p>
             <p className="text-sm text-yellow-600 mt-2">
               To view the full experience, access this page through your Whop dashboard.
             </p>
+            <div className="mt-4 p-3 bg-yellow-100 rounded text-xs font-mono">
+              <div className="font-bold">Debug Info:</div>
+              <div>• Experience ID: {experienceId}</div>
+              <div>• Access Method: Direct browser access</div>
+              <div>• Hostname: {typeof window !== 'undefined' ? window.location.hostname : 'unknown'}</div>
+              <div>• Admin Panel: Not accessible (requires iframe context)</div>
+            </div>
           </div>
           <ExperienceWrapper experienceId={experienceId}>
             {children}

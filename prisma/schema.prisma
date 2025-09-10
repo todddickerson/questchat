@@ -25,10 +25,12 @@ model User {
 
 model Experience {
   id            String   @id @default(cuid())
-  experienceId  String   @unique // exp_xxxx (chat experience)
+  experienceId  String   @unique // exp_xxxx (QuestChat experience)
+  chatExperienceId String? // exp_xxxx (discovered Chat app experience)
   accessPassId  String?        // prod_xxxx (optional)
   name          String?
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
   
   // Relations
   config        Config?

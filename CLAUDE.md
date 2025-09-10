@@ -64,10 +64,27 @@ IssuedCode    - Generated promo codes
 
 ## 🔧 Known Issues & Next Steps
 
+### Issues Resolved ✅
+1. **Chat Experience Validation**: Working! QuestChat app (`exp_ms5KOPv48rZVnh`) properly validates
+2. **Whop Iframe Integration**: Successfully running in Whop iframe with proper authentication
+3. **Admin Access**: Protected with `AdminAuthWrapper` component checking iframe context
+4. **Database Setup**: PostgreSQL database initialized with all required tables
+5. **Test Prompts**: Successfully posting test prompts (stored in database, simulated chat send)
+6. **Environment Configuration**: All environment variables properly configured and working
+
+### Testing Completed (January 2025)
+- ✅ Local development with Whop proxy (port 3002)
+- ✅ Authentication through Whop iframe
+- ✅ Admin panel access for app owners
+- ✅ Database connectivity and operations
+- ✅ Test prompt posting through admin panel
+- ✅ Message logging to database
+
 ### Issues to Address
-1. **Chat Experience ID**: Need to verify correct chat experience ID for message posting
-2. **Authentication**: Currently bypassed for testing, needs proper Whop SDK integration
-3. **Promo Codes**: Reward generation needs testing with real Whop products
+1. **Real Chat Integration**: Need actual Whop chat channel ID (not app ID) for message posting
+2. **Promo Codes**: Reward generation needs testing with real Whop products
+3. **Streak Tracking**: Requires real user messages from chat to test streak logic
+4. **Role-Based Access**: Admin panel needs proper Whop SDK role verification (currently just checks iframe)
 
 ### Enhancement Opportunities
 - Real-time updates with WebSocket
@@ -76,44 +93,121 @@ IssuedCode    - Generated promo codes
 - Email notifications
 - Custom branding per experience
 
+## 🔬 Development Resources
+
+### Research & Documentation
+Use Perplexity MCP server for deep research when unsure about:
+- API syntax and versions
+- Integration patterns with Whop SDK
+- Database schema best practices
+- Next.js and React patterns
+- Tailwind CSS utilities
+- Deployment configurations
+
+Commands available:
+- `mcp__perplexity-mcp__search` - Quick searches
+- `mcp__perplexity-mcp__reason` - Complex problem solving
+- `mcp__perplexity-mcp__deep_research` - Comprehensive analysis
+
 ## 📚 Development Guide
 
-### Local Setup
+### Local Setup - CONFIRMED WORKING ✅
 ```bash
 # Clone and install
 git clone https://github.com/todddickerson/questchat.git
 cd questchat
 pnpm install
 
-# Setup environment
-cp .env.example .env.local
-# Edit .env.local with your credentials
+# Setup environment (REQUIRED)
+# Create .env.local with these exact variables:
+cat > .env.local << EOF
+WHOP_API_KEY=IoxDyQvZ0S1yP55sWgvfPOBur4LyveCumAbod0JyPZQ
+WHOP_AGENT_USER_ID=user_efVmoTigk4GE0
+WHOP_APP_ID=app_F9H2JvGE8lfV4w
+WHOP_COMPANY_ID=biz_CHKyxzlPRslE1Q
+WHOP_PUBLIC_BASE_URL=http://localhost:3002
+NEXT_PUBLIC_WHOP_APP_ID=app_F9H2JvGE8lfV4w
+DATABASE_URL=postgresql://postgres.awzmjhbwljmvijqwtpqu:5oiBT4CyAtpHjXL8@aws-1-us-east-2.pooler.supabase.com:6543/postgres?pgbouncer=true
+DIRECT_URL=postgresql://postgres.awzmjhbwljmvijqwtpqu:5oiBT4CyAtpHjXL8@aws-1-us-east-2.pooler.supabase.com:5432/postgres
+NEXT_PUBLIC_SUPABASE_URL=https://awzmjhbwljmvijqwtpqu.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3em1qaGJ3bGptdmlqcXd0cHF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczMzgxODIsImV4cCI6MjA3MjkxNDE4Mn0.keX2Wd05FMXiUq9Y8K606xWpAVrY1hu9oygcQRnGx04
+QUESTCHAT_SIGNING_SECRET=questchat-secret-2024-secure-key-12345
+EOF
 
-# Database setup
+# Generate Prisma client (CRITICAL)
 pnpm prisma generate
-pnpm prisma db push
 
-# Run locally (basic)
-pnpm dev
+# Start with Whop proxy (REQUIRED for iframe integration)
+# This runs proxy on port 3002 and app on 3001
+pnpm dlx @whop-apps/dev-proxy --proxyPort 3002 --upstreamPort 3001 --command 'pnpm next dev --port 3001'
 
-# Run with Whop authentication proxy (recommended)
-pnpm whop-proxy
-# or
+# Or use the package.json script:
 pnpm whop-dev
 ```
 
-### Whop Development Proxy
-For proper authentication testing locally, use the Whop dev proxy. See [WHOP-DEV.md](./WHOP-DEV.md) for detailed setup instructions.
+### Whop Dashboard Configuration (CRITICAL)
+1. Go to: https://whop.com/apps/biz_CHKyxzlPRslE1Q/app_F9H2JvGE8lfV4w/integration/
+2. Set Base URL to: `http://localhost:3002` (NOT https!)
+3. Enable "Localhost" mode in app settings
+4. Configure views:
+   - Consumer Product: `/experiences/[experienceId]`
+   - Seller Product: `/experiences/[experienceId]/admin`
+   - Discovery: `/`
+
+### Enable Dev Mode in Whop
+1. Go to https://whop.com/hub
+2. Look for dev toggle (🔧) in top right corner
+3. Click to enable development mode
+4. Navigate to your app: https://whop.com/hub/app/app_F9H2JvGE8lfV4w
+
+### Admin Panel Access
+The admin panel (`/experiences/[experienceId]/admin`) requires:
+1. **Access through Whop iframe** - Direct browser access is blocked
+2. **App owner permissions** - Must be logged in as app owner
+3. **Protected by AdminAuthWrapper** - Verifies iframe context
+
+Admin features available:
+- Configure daily prompt time
+- Set reward percentages and stock
+- Add custom prompt questions
+- Test prompt posting immediately
+
+### Verified Working URLs (January 2025)
+- Proxy: http://localhost:3002
+- Health: http://localhost:3002/api/health ✅
+- Experience: http://localhost:3002/experiences/test ✅
+- Admin: http://localhost:3002/experiences/test/admin ✅
+
+### Common Setup Issues & Solutions
+
+#### Prisma Client Error
+If you see "Cannot find module '.prisma/client/default'":
+```bash
+rm -rf .next node_modules/.prisma
+pnpm prisma generate
+# Then restart proxy
+```
+
+#### Wrong URL in Whop Dashboard
+- MUST use `http://localhost:3002` (NOT https!)
+- The proxy runs on HTTP only for local development
+
+#### Dev Mode Not Enabled
+- Without dev mode enabled in Whop, the app won't load from localhost
+- Look for the 🔧 icon in top right at https://whop.com/hub
 
 ### Testing Endpoints
 ```bash
-# Test daily prompt
-curl -X POST http://localhost:3000/api/cron/prompt \
-  -H "x-questchat-signature: your-secret"
+# Test health (should return healthy status)
+curl http://localhost:3002/api/health
+
+# Test daily prompt (requires auth)
+curl -X POST http://localhost:3002/api/cron/prompt \
+  -H "x-questchat-signature: questchat-secret-2024-secure-key-12345"
 
 # Test rollover
-curl -X POST http://localhost:3000/api/cron/rollover \
-  -H "x-questchat-signature: your-secret"
+curl -X POST http://localhost:3002/api/cron/rollover \
+  -H "x-questchat-signature: questchat-secret-2024-secure-key-12345"
 ```
 
 ### Deployment

@@ -38,19 +38,38 @@ export default function ExperienceWrapper({
   }, [experienceId]);
 
   const checkChatStatus = async () => {
+    console.log("[ExperienceWrapper] Starting chat status check", {
+      experienceId,
+      companyId,
+      timestamp: new Date().toISOString()
+    });
+    
     setChatStatus({ isChecking: true, hasChat: false, needsSetup: false });
 
     try {
       // First check if the current experience ID is a valid chat
+      const requestBody = { 
+        experienceId,
+        companyId: companyId || "biz_CHKyxzlPRslE1Q" // Use provided or default company ID
+      };
+      
+      console.log("[ExperienceWrapper] Sending validation request", requestBody);
+      
       const validateResponse = await fetch(`/api/admin/validate-chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ experienceId }),
+        body: JSON.stringify(requestBody),
       });
 
       const validateData = await validateResponse.json();
+      console.log("[ExperienceWrapper] Validation response received", {
+        status: validateResponse.status,
+        data: validateData,
+        timestamp: new Date().toISOString()
+      });
 
       if (validateData.valid) {
+        console.log("[ExperienceWrapper] ✅ Chat validated successfully");
         setChatStatus({
           isChecking: false,
           hasChat: true,
@@ -60,6 +79,11 @@ export default function ExperienceWrapper({
       }
 
       // If not valid, check if we need setup
+      console.log("[ExperienceWrapper] ❌ Chat not valid, needs setup", {
+        message: validateData.message,
+        error: validateData.error
+      });
+      
       setChatStatus({
         isChecking: false,
         hasChat: false,
@@ -67,7 +91,7 @@ export default function ExperienceWrapper({
         error: validateData.message || "Chat not connected",
       });
     } catch (error) {
-      console.error("Failed to check chat status:", error);
+      console.error("[ExperienceWrapper] Failed to check chat status:", error);
       setChatStatus({
         isChecking: false,
         hasChat: false,
